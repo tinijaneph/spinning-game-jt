@@ -131,9 +131,10 @@
     font-size: 16px;
     font-weight: 600;
     letter-spacing: 0.2px;
+    cursor: pointer;
   }
   .spin-btn:active{ transform: scale(.985); }
-  .spin-btn:disabled{ opacity:.5; }
+  .spin-btn:disabled{ opacity:.5; cursor: not-allowed; }
 
   /* result card */
   .result{
@@ -179,7 +180,9 @@
   .pill-btn{
     flex:1; padding: 12px; border-radius: 12px; border: 1px solid var(--line);
     background: transparent; color: var(--pearl-dim); font-size: 14px; font-weight:600;
+    cursor: pointer;
   }
+  .pill-btn:disabled{ opacity: 0.4; cursor: not-allowed; }
   .pill-btn.primary{ background: var(--pearl); color:#111; border-color:transparent; }
   .pill-btn.deduct{ color: var(--danger); border-color: rgba(183,71,63,.4); }
 
@@ -201,7 +204,7 @@
   footer{ margin-top: auto; padding-top: 26px; text-align:center; }
   .reset-link{
     background:none; border:none; color: var(--silver-2); font-size:12.5px;
-    text-decoration: underline; padding: 8px;
+    text-decoration: underline; padding: 8px; cursor: pointer;
   }
 </style>
 </head>
@@ -346,7 +349,7 @@ let syncedSpinner = names[0];
 let lastAppliedRoundId = null;
 let isInitialLoad = true;
 let usedDares = new Set();
-let usedQuestions = {}; // per-category, local-only (not synced — occasional repeats across phones are fine)
+let usedQuestions = {}; // per-category, local-only
 CATS.forEach(c => usedQuestions[c.id] = new Set());
 
 /* ---------- CHIPS ---------- */
@@ -452,8 +455,10 @@ const qTagEl = document.getElementById('qTag');
 const btnTruth = document.getElementById('btnTruth');
 const btnDare = document.getElementById('btnDare');
 const spinnerNameEl = document.getElementById('spinnerName');
+const awardBtn = document.getElementById('award');
+const penalizeBtn = document.getElementById('penalize');
 
-/* ---------- QUESTION PICKING (local, based on synced active categories) ---------- */
+/* ---------- QUESTION PICKING ---------- */
 function pickFromCategory(){
   const activeIds = CATS.filter(c=>syncedActiveCats[c.id]).map(c=>c.id);
   const pool = activeIds.length ? activeIds : CATS.map(c=>c.id);
@@ -474,7 +479,7 @@ function pickDare(){
   return dares[idx];
 }
 
-/* ---------- SPIN (writes to Firebase; every device animates when it sees a new round) ---------- */
+/* ---------- SPIN ---------- */
 spinBtn.addEventListener('click', ()=>{
   if(spinning) return;
   const n = names.length;
@@ -488,7 +493,8 @@ spinBtn.addEventListener('click', ()=>{
     spinnerName: syncedSpinner,
     mode: 'truth',
     tag: q.tag,
-    text: q.text
+    text: q.text,
+    scored: false
   };
   set(ref(db,'game/round'), round);
 });
@@ -503,7 +509,7 @@ btnDare.onclick = ()=>{
 document.getElementById('reroll').onclick = ()=>{
   get(ref(db,'game/round')).then(snap=>{
     const r = snap.val();
-    if(!r) return;
+    if(!r || r.scored) return;
     if(r.mode === 'dare'){
       update(ref(db,'game/round'), { text: pickDare() });
     } else {
@@ -513,20 +519,24 @@ document.getElementById('reroll').onclick = ()=>{
   });
 };
 
-document.getElementById('award').onclick = ()=>{
+awardBtn.onclick = ()=>{
   get(ref(db,'game/round')).then(snap=>{
     const r = snap.val();
-    if(!r) return;
+    if(!r || r.scored) return;
     const delta = r.mode==='dare' ? 2 : 1;
     runTransaction(ref(db, `game/scores/${r.pickedName}`), cur => (cur||0) + delta);
+    update(ref(db,'game/round'), { scored: true });
     update(ref(db,'game'), { currentSpinner: r.pickedName });
   });
 };
-document.getElementById('penalize').onclick = ()=>{
+
+penalizeBtn.onclick = ()=>{
   get(ref(db,'game/round')).then(snap=>{
     const r = snap.val();
-    if(!r) return;
+    if(!r || r.scored) return;
     runTransaction(ref(db, `game/scores/${r.pickedName}`), cur => (cur||0) - 1);
+    update(ref(db,'game/round'), { scored: true });
+    update(ref(db,'game'), { currentSpinner: r.pickedName });
   });
 };
 
@@ -589,15 +599,18 @@ onValue(gameRef, (snapshot)=>{
   if(!r){
     resultEl.classList.remove('show');
     lastAppliedRoundId = null;
+    spinBtn.disabled = false;
     if(!isInitialLoad) resetWheelVisual();
     isInitialLoad = false;
     return;
   }
 
+  // Prevent spinning while an active round exists and isn't finished
+  spinBtn.disabled = spinning || !r.scored;
+
   const isNewRound = r.id !== lastAppliedRoundId;
 
   if(isInitialLoad){
-    // Joined mid-game (or refreshed) — show the current round instantly, no animation.
     lastAppliedRoundId = r.id;
     isInitialLoad = false;
     applyRoundToUI(r);
@@ -611,12 +624,11 @@ onValue(gameRef, (snapshot)=>{
     rotateTo(r.pickIndex, extraSpins);
     setTimeout(()=>{
       spinning = false;
-      spinBtn.disabled = false;
+      spinBtn.disabled = !r.scored;
       lastAppliedRoundId = r.id;
       applyRoundToUI(r);
     }, 4300);
   } else {
-    // Same round, just mode/question changed (Truth/Dare toggle, reroll) — update instantly.
     applyRoundToUI(r);
   }
 });
@@ -628,6 +640,14 @@ function applyRoundToUI(r){
   btnDare.classList.toggle('active', r.mode==='dare');
   qTagEl.textContent = r.tag;
   qTextEl.textContent = r.text;
+  
+  // Disable score and question change buttons if points have already been calculated
+  awardBtn.disabled = !!r.scored;
+  penalizeBtn.disabled = !!r.scored;
+  document.getElementById('reroll').disabled = !!r.scored;
+  btnTruth.disabled = !!r.scored;
+  btnDare.disabled = !!r.scored;
+
   resultEl.classList.add('show');
 }
 </script>
