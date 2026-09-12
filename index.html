@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Vòng Quay Sự Thật</title>
+<style>
+  :root{
+    --black: #0a0a0b;
+    --charcoal: #17171a;
+    --panel: #1e1f23;
+    --pearl: #f4f3ef;
+    --pearl-dim: #cfcdc6;
+    --silver-1: #e8e6e1;
+    --silver-2: #9a988f;
+    --silver-3: #4a4a4c;
+    --line: #2c2d31;
+    --danger: #b7473f;
+    --gold: #cbb98a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: radial-gradient(120% 100% at 50% -10%, #232327 0%, var(--black) 55%);
+    color: var(--pearl);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    overflow-x:hidden;
+  }
+  .wrap{
+    max-width: 480px;
+    margin: 0 auto;
+    padding: env(safe-area-inset-top) 18px calc(env(safe-area-inset-bottom) + 24px);
+    min-height: 100%;
+    display:flex; flex-direction:column;
+  }
+  header{
+    padding: 22px 0 10px;
+    text-align:center;
+  }
+  header h1{
+    font-size: 22px;
+    letter-spacing: 0.3px;
+    font-weight: 600;
+    margin: 0;
+    background: linear-gradient(180deg, var(--pearl) 0%, var(--silver-2) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header p{
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: var(--silver-2);
+  }
+
+  /* category chips */
+  .turn-banner{
+    margin-top: 14px;
+    text-align:center;
+    font-size: 13px;
+    color: var(--silver-2);
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--charcoal);
+  }
+  .turn-banner span{
+    color: var(--pearl);
+    font-weight: 700;
+  }
+  .chips{
+    display:flex; gap:8px; overflow-x:auto; padding: 14px 2px 4px;
+    scrollbar-width:none;
+  }
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{
+    flex: 0 0 auto;
+    padding: 9px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--charcoal);
+    color: var(--silver-2);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .chip.on{
+    background: linear-gradient(180deg, var(--pearl) 0%, var(--silver-1) 100%);
+    color: #16161a;
+    border-color: transparent;
+  }
+
+  /* wheel */
+  .wheel-stage{
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1/1;
+    max-width: 360px;
+    margin: 18px auto 8px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .pointer{
+    position:absolute; top:-4px; left:50%; transform:translateX(-50%);
+    width: 0; height:0; z-index: 5;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-top: 20px solid var(--pearl);
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.6));
+  }
+  canvas#wheel{
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,.55));
+    transition: transform 4.2s cubic-bezier(.15,.72,.22,1);
+  }
+  .hub{
+    position:absolute; width: 62px; height:62px; border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #fff, var(--silver-2) 60%, var(--silver-3) 100%);
+    box-shadow: 0 2px 10px rgba(0,0,0,.5), inset 0 0 6px rgba(0,0,0,.3);
+    z-index: 4;
+  }
+
+  .spin-btn{
+    display:block; margin: 6px auto 4px;
+    width: 100%; max-width: 360px;
+    padding: 15px;
+    border-radius: 16px;
+    border: none;
+    background: linear-gradient(180deg, var(--pearl) 0%, #d9d7d1 100%);
+    color: #111;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+  .spin-btn:active{ transform: scale(.985); }
+  .spin-btn:disabled{ opacity:.5; }
+
+  /* result card */
+  .result{
+    margin-top: 18px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 18px;
+    display:none;
+  }
+  .result.show{ display:block; animation: rise .35s ease; }
+  @keyframes rise{ from{opacity:0; transform: translateY(8px);} to{opacity:1; transform:none;} }
+  .result .who{
+    font-size: 13px; color: var(--silver-2); margin-bottom: 4px;
+  }
+  .result .name{
+    font-size: 24px; font-weight: 700; color: var(--pearl); margin-bottom: 14px;
+  }
+  .mode-toggle{
+    display:flex; gap:8px; margin-bottom: 14px;
+  }
+  .mode-btn{
+    flex:1; padding: 10px; border-radius: 12px; border:1px solid var(--line);
+    background: var(--charcoal); color: var(--pearl-dim); font-size: 14px; font-weight:600;
+  }
+  .mode-btn.active{ background: var(--pearl); color:#111; border-color:transparent; }
+  .question-box{
+    background: var(--black);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 15.5px;
+    line-height: 1.55;
+    white-space: pre-line;
+    color: var(--silver-1);
+    min-height: 60px;
+  }
+  .question-box .tag{
+    display:inline-block; font-size: 11px; color: var(--gold); border:1px solid rgba(203,185,138,.4);
+    padding: 2px 8px; border-radius: 999px; margin-bottom: 8px;
+  }
+  .row-btns{ display:flex; gap:8px; margin-top: 14px; }
+  .pill-btn{
+    flex:1; padding: 12px; border-radius: 12px; border: 1px solid var(--line);
+    background: transparent; color: var(--pearl-dim); font-size: 14px; font-weight:600;
+  }
+  .pill-btn.primary{ background: var(--pearl); color:#111; border-color:transparent; }
+  .pill-btn.deduct{ color: var(--danger); border-color: rgba(183,71,63,.4); }
+
+  /* scoreboard */
+  .board{
+    margin-top: 22px;
+  }
+  .board h2{
+    font-size: 14px; color: var(--silver-2); margin: 0 0 10px; font-weight:600;
+  }
+  .score-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 10px 4px; border-bottom: 1px solid var(--line);
+    font-size: 14.5px;
+  }
+  .score-row:last-child{ border-bottom:none; }
+  .score-row .pts{ font-weight:700; color: var(--pearl); }
+
+  footer{ margin-top: auto; padding-top: 26px; text-align:center; }
+  .reset-link{
+    background:none; border:none; color: var(--silver-2); font-size:12.5px;
+    text-decoration: underline; padding: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Vòng Quay Sự Thật</h1>
+    <p>Quay để chọn người · trả lời thật hoặc nhận thử thách</p>
+  </header>
+
+  <div class="turn-banner" id="turnBanner">Người quay: <span id="spinnerName">—</span></div>
+
+  <div class="chips" id="chips"></div>
+
+  <div class="wheel-stage">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="720" height="720"></canvas>
+    <div class="hub"></div>
+  </div>
+
+  <button class="spin-btn" id="spinBtn">Quay Ngay</button>
+
+  <div class="result" id="result">
+    <div class="who" id="whoLabel">Người được chọn</div>
+    <div class="name" id="pickedName">—</div>
+
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btnTruth">Sự Thật</button>
+      <button class="mode-btn" id="btnDare">Thử Thách</button>
+    </div>
+
+    <div class="question-box" id="qBox">
+      <span class="tag" id="qTag">Chủ đề</span><br>
+      <span id="qText">Nhấn "Quay Ngay" để bắt đầu.</span>
+    </div>
+
+    <div class="row-btns">
+      <button class="pill-btn" id="reroll">Đổi câu khác</button>
+      <button class="pill-btn primary" id="award">+ Điểm (đã trả lời)</button>
+    </div>
+    <div class="row-btns">
+      <button class="pill-btn deduct" id="penalize">− Điểm (từ chối trả lời)</button>
+    </div>
+  </div>
+
+  <div class="board">
+    <h2>Bảng điểm</h2>
+    <div id="scoreList"></div>
+  </div>
+
+  <footer>
+    <button class="reset-link" id="resetAll">Đặt lại điểm & bắt đầu lại</button>
+  </footer>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import {
+  getDatabase, ref, onValue, set, update, get, runTransaction
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBdelsX01ANWr41-4C0E0ypBYb60a-C5jQ",
+  authDomain: "spinning-game-c7041.firebaseapp.com",
+  databaseURL: "https://spinning-game-c7041-default-rtdb.firebaseio.com/",
+  projectId: "spinning-game-c7041",
+  storageBucket: "spinning-game-c7041.firebasestorage.app",
+  messagingSenderId: "2753287212",
+  appId: "1:2753287212:web:4ea16ff86fb57567cb6d89"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const gameRef = ref(db, 'game');
+
+/* ---------- DATA ---------- */
+const names = ["Ni","Zin","Vy","Ngoc","Linh","Khoa","Tuyen","June"];
+
+const CATS = [
+  { id: 'love', label: "Tình yêu", questions: [
+    "Tình trạng mối quan hệ hiện tại của bạn là gì? Đang ở giai đoạn nào (mới quen, tìm hiểu, yêu chính thức, phức tạp)? Mô tả chi tiết.",
+    "Bạn đã có bao nhiêu mối tình? Mối tình đầu tiên bắt đầu khi bạn bao nhiêu tuổi, và tại sao chia tay?",
+    "Trong tất cả người yêu cũ, ai là người bạn khó quên nhất? Điều gì khiến người đó đặc biệt?",
+    "Mối tình nào kết thúc tệ nhất? Chuyện gì đã xảy ra và ai là người chủ động chia tay?",
+    "Bạn có đang thích ai trong thời điểm này không? Nếu có, người đó là ai (mô tả không cần nêu tên) và bạn thích điều gì ở họ?",
+    "Tiêu chuẩn chọn người yêu của bạn là gì? Điều gì là giới hạn đỏ (dealbreaker) bạn không thể chấp nhận?",
+    "Bạn đã từng crush một người trong nhóm bạn bè chung chưa? Chuyện đó diễn ra thế nào?",
+    "Lần đầu tiên bạn nói 'anh/em yêu em/anh' là khi nào, với ai, và bạn có hối hận vì nói câu đó không?",
+    "Bạn từng bị từ chối tình cảm chưa? Kể lại chi tiết lần đó và cảm giác của bạn.",
+    "Bạn có từng yêu xa chưa? Mối quan hệ đó kéo dài bao lâu và vì sao kết thúc (hoặc vẫn đang tiếp diễn)?",
+    "Người yêu cũ nào bạn vẫn còn giữ liên lạc? Vì sao vẫn nói chuyện với người đó?",
+    "Bạn đã từng là người thứ ba hoặc từng bị cắm sừng chưa? Kể chi tiết nếu có.",
+    "Trong các mối tình đã qua, mối tình nào bạn hối hận nhất khi để mất? Vì sao?",
+    "Bạn nghĩ mình có đang 'chưa qua được' người yêu cũ nào không? Ai và tại sao?",
+    "Tin nhắn tỏ tình ngọt ngào nhất bạn từng nhận hoặc từng gửi là gì?",
+  ]},
+  { id: 'secret', label: "Bí mật", questions: [
+    "Điều xấu hổ nhất bạn từng làm trước mặt người mình thích là gì?",
+    "Bạn từng nói dối bố mẹ điều gì nghiêm trọng nhất để đi chơi/đi gặp người yêu?",
+    "Tin nhắn/ảnh nào trong điện thoại bạn sợ nhất nếu ai đó trong nhóm này đọc được?",
+    "Bạn từng theo dõi (stalk) mạng xã hội của người yêu cũ đến mức nào? Kể lại lần gần nhất.",
+    "Có bí mật nào bạn giữ kín với cả nhóm bạn thân này không? Gợi ý một phần bí mật đó.",
+    "Bạn từng làm gì khiến bản thân xấu hổ nhất khi say rượu?",
+    "Có ai trong nhóm này bạn từng thầm thích không? Nếu có, mô tả cảm giác lúc đó.",
+    "Lời nói dối lớn nhất bạn từng nói với một người bạn trong nhóm là gì?",
+    "Bạn từng đọc trộm tin nhắn của người yêu/người yêu cũ chưa? Bạn tìm thấy gì?",
+    "Tật xấu nào của bạn mà ít người biết nhất?",
+  ]},
+  { id: 'hypo', label: "Giả sử", questions: [
+    "Nếu phải chọn một người trong nhóm này để hẹn hò, bạn sẽ chọn ai và vì sao?",
+    "Nếu ngày mai người yêu cũ nhắn tin muốn quay lại, bạn sẽ trả lời thế nào?",
+    "Nếu chỉ được giữ liên lạc với một người yêu cũ duy nhất suốt đời, bạn chọn ai?",
+    "Nếu phải công khai một bí mật của bản thân trước cả nhóm, bạn sẽ chọn nói bí mật nào?",
+    "Nếu có thể quay lại và ngăn một mối tình xảy ra, bạn sẽ chọn ngăn mối tình nào?",
+    "Nếu người yêu hiện tại (hoặc tương lai) hỏi về mối tình sâu đậm nhất của bạn, bạn sẽ kể đến mức nào?",
+    "Nếu phải nhắn một tin nhắn thật lòng cho người yêu cũ ngay bây giờ, bạn sẽ viết gì?",
+  ]},
+  { id: 'fun', label: "Vui / Hài", questions: [
+    "Kiểu người bạn 'dễ đổ' nhất là kiểu ngoại hình/tính cách nào?",
+    "Bạn từng bị 'thả thính' một cách lộ liễu nhưng giả vờ không biết chưa? Kể lại.",
+    "Câu 'cưa cẩm' dở tệ nhất bạn từng nghe hoặc từng dùng là gì?",
+    "Bạn nghĩ ai trong nhóm này sẽ kết hôn sớm nhất? Vì sao?",
+    "Nếu phải mai mối hai người trong nhóm này với nhau, bạn sẽ ghép ai với ai?",
+  ]},
+];
+
+const dares = [
+  "Nhắn tin cho người yêu cũ gần nhất một câu 'Dạo này bạn sao rồi?' và đọc to phản hồi cho cả nhóm nghe.",
+  "Gọi điện video cho một người bất kỳ trong danh bạ và hát 1 câu trong bài hát tình yêu.",
+  "Để một người trong nhóm đọc 3 tin nhắn gần nhất trong hộp thoại với người bạn nhắn nhiều nhất.",
+  "Bắt chước cách bạn tỏ tình (hoặc từng bị tỏ tình) trước mặt cả nhóm.",
+  "Đăng một story không có chú thích trong 10 phút, để cả nhóm đoán ý nghĩa.",
+  "Nhắn tin '3 chấm...' cho người mà bạn thấy có hứng thú gần đây rồi tắt máy, không giải thích.",
+  "Để cả nhóm chọn hộ bạn một câu để nhắn cho một người bất kỳ trong máy.",
+  "Diễn tả không dùng lời (chỉ hành động) mối tình đáng nhớ nhất của bạn để nhóm đoán.",
+];
+
+/* ---------- LOCAL MIRROR OF SYNCED STATE ---------- */
+let syncedScores = {};
+let syncedActiveCats = {}; // id -> bool
+let syncedSpinner = names[0];
+let lastAppliedRoundId = null;
+let isInitialLoad = true;
+let usedDares = new Set();
+let usedQuestions = {}; // per-category, local-only (not synced — occasional repeats across phones are fine)
+CATS.forEach(c => usedQuestions[c.id] = new Set());
+
+/* ---------- CHIPS ---------- */
+const chipsEl = document.getElementById('chips');
+const chipButtons = {};
+CATS.forEach(cat=>{
+  const b = document.createElement('button');
+  b.className = 'chip';
+  b.textContent = cat.label;
+  b.onclick = ()=>{
+    const activeIds = CATS.filter(c=>syncedActiveCats[c.id]).map(c=>c.id);
+    if (syncedActiveCats[cat.id] && activeIds.length===1) return; // keep at least one active
+    update(ref(db,'game/activeCategories'), { [cat.id]: !syncedActiveCats[cat.id] });
+  };
+  chipButtons[cat.id] = b;
+  chipsEl.appendChild(b);
+});
+function renderChips(){
+  CATS.forEach(cat=>{
+    chipButtons[cat.id].classList.toggle('on', !!syncedActiveCats[cat.id]);
+  });
+}
+
+/* ---------- WHEEL DRAW ---------- */
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const R = canvas.width/2;
+const palette = ["#1c1c1f","#232327","#2a2a2e","#202023"];
+
+function drawWheel(){
+  const n = names.length;
+  const seg = (Math.PI*2)/n;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let i=0;i<n;i++){
+    const start = i*seg - Math.PI/2;
+    const end = start+seg;
+    ctx.beginPath();
+    ctx.moveTo(R,R);
+    ctx.arc(R,R,R-6,start,end);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+    grad.addColorStop(0, palette[i%palette.length]);
+    grad.addColorStop(1, "#111113");
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(244,243,239,0.14)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(R,R);
+    ctx.rotate(start+seg/2);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#f4f3ef";
+    ctx.font = "600 30px -apple-system, sans-serif";
+    ctx.shadowColor = "rgba(0,0,0,.6)";
+    ctx.shadowBlur = 4;
+    ctx.fillText(names[i], R-30, 10);
+    ctx.restore();
+  }
+  ctx.beginPath();
+  ctx.arc(R,R,R-3,0,Math.PI*2);
+  ctx.lineWidth = 6;
+  const ringGrad = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+  ringGrad.addColorStop(0,"#f4f3ef");
+  ringGrad.addColorStop(.5,"#8f8d86");
+  ringGrad.addColorStop(1,"#f4f3ef");
+  ctx.strokeStyle = ringGrad;
+  ctx.stroke();
+}
+drawWheel();
+
+/* ---------- ROTATION MATH ---------- */
+let currentRotation = 0;
+let spinning = false;
+
+function rotateTo(pickIndex, extraSpins){
+  const n = names.length;
+  const seg = 360/n;
+  const targetCenter = pickIndex*seg + seg/2;
+  const requiredMod = ((360 - targetCenter) % 360 + 360) % 360;
+  const prevMod = ((currentRotation % 360) + 360) % 360;
+  let delta = requiredMod - prevMod;
+  if (delta <= 0) delta += 360;
+  currentRotation = currentRotation + extraSpins*360 + delta;
+  canvas.style.transform = `rotate(${currentRotation}deg)`;
+}
+
+function resetWheelVisual(){
+  currentRotation = 0;
+  canvas.style.transition = 'none';
+  canvas.style.transform = 'rotate(0deg)';
+  requestAnimationFrame(()=>{ canvas.style.transition = ''; });
+}
+
+/* ---------- DOM REFS ---------- */
+const spinBtn = document.getElementById('spinBtn');
+const resultEl = document.getElementById('result');
+const pickedNameEl = document.getElementById('pickedName');
+const whoLabelEl = document.getElementById('whoLabel');
+const qTextEl = document.getElementById('qText');
+const qTagEl = document.getElementById('qTag');
+const btnTruth = document.getElementById('btnTruth');
+const btnDare = document.getElementById('btnDare');
+const spinnerNameEl = document.getElementById('spinnerName');
+
+/* ---------- QUESTION PICKING (local, based on synced active categories) ---------- */
+function pickFromCategory(){
+  const activeIds = CATS.filter(c=>syncedActiveCats[c.id]).map(c=>c.id);
+  const pool = activeIds.length ? activeIds : CATS.map(c=>c.id);
+  const catId = pool[Math.floor(Math.random()*pool.length)];
+  const cat = CATS.find(c=>c.id===catId);
+  let used = usedQuestions[catId];
+  if(used.size >= cat.questions.length) used.clear();
+  let idx;
+  do { idx = Math.floor(Math.random()*cat.questions.length); } while(used.has(idx) && used.size < cat.questions.length);
+  used.add(idx);
+  return { tag: cat.label, text: cat.questions[idx] };
+}
+function pickDare(){
+  if(usedDares.size >= dares.length) usedDares.clear();
+  let idx;
+  do { idx = Math.floor(Math.random()*dares.length); } while(usedDares.has(idx) && usedDares.size < dares.length);
+  usedDares.add(idx);
+  return dares[idx];
+}
+
+/* ---------- SPIN (writes to Firebase; every device animates when it sees a new round) ---------- */
+spinBtn.addEventListener('click', ()=>{
+  if(spinning) return;
+  const n = names.length;
+  let pickIndex;
+  do { pickIndex = Math.floor(Math.random()*n); } while (names[pickIndex] === syncedSpinner && n > 1);
+  const q = pickFromCategory();
+  const round = {
+    id: Date.now(),
+    pickIndex,
+    pickedName: names[pickIndex],
+    spinnerName: syncedSpinner,
+    mode: 'truth',
+    tag: q.tag,
+    text: q.text
+  };
+  set(ref(db,'game/round'), round);
+});
+
+btnTruth.onclick = ()=>{
+  const q = pickFromCategory();
+  update(ref(db,'game/round'), { mode:'truth', tag:q.tag, text:q.text });
+};
+btnDare.onclick = ()=>{
+  update(ref(db,'game/round'), { mode:'dare', tag:'Thử thách', text:pickDare() });
+};
+document.getElementById('reroll').onclick = ()=>{
+  get(ref(db,'game/round')).then(snap=>{
+    const r = snap.val();
+    if(!r) return;
+    if(r.mode === 'dare'){
+      update(ref(db,'game/round'), { text: pickDare() });
+    } else {
+      const q = pickFromCategory();
+      update(ref(db,'game/round'), { tag:q.tag, text:q.text });
+    }
+  });
+};
+
+document.getElementById('award').onclick = ()=>{
+  get(ref(db,'game/round')).then(snap=>{
+    const r = snap.val();
+    if(!r) return;
+    const delta = r.mode==='dare' ? 2 : 1;
+    runTransaction(ref(db, `game/scores/${r.pickedName}`), cur => (cur||0) + delta);
+    update(ref(db,'game'), { currentSpinner: r.pickedName });
+  });
+};
+document.getElementById('penalize').onclick = ()=>{
+  get(ref(db,'game/round')).then(snap=>{
+    const r = snap.val();
+    if(!r) return;
+    runTransaction(ref(db, `game/scores/${r.pickedName}`), cur => (cur||0) - 1);
+  });
+};
+
+document.getElementById('resetAll').onclick = ()=>{
+  const freshScores = {};
+  names.forEach(n=> freshScores[n]=0);
+  const freshCats = {};
+  CATS.forEach(c=> freshCats[c.id]=true);
+  set(gameRef, {
+    scores: freshScores,
+    activeCategories: freshCats,
+    currentSpinner: names[Math.floor(Math.random()*names.length)],
+    round: null
+  });
+};
+
+/* ---------- SCOREBOARD ---------- */
+function renderScores(){
+  const list = document.getElementById('scoreList');
+  list.innerHTML = '';
+  const sorted = [...names].sort((a,b)=>(syncedScores[b]||0)-(syncedScores[a]||0));
+  sorted.forEach(n=>{
+    const row = document.createElement('div');
+    row.className = 'score-row';
+    row.innerHTML = `<span>${n}</span><span class="pts">${syncedScores[n]||0}</span>`;
+    list.appendChild(row);
+  });
+}
+
+/* ---------- LIVE SYNC ---------- */
+get(gameRef).then(snap=>{
+  if(!snap.exists()){
+    const freshScores = {};
+    names.forEach(n=> freshScores[n]=0);
+    const freshCats = {};
+    CATS.forEach(c=> freshCats[c.id]=true);
+    set(gameRef, {
+      scores: freshScores,
+      activeCategories: freshCats,
+      currentSpinner: names[Math.floor(Math.random()*names.length)],
+      round: null
+    });
+  }
+});
+
+onValue(gameRef, (snapshot)=>{
+  const data = snapshot.val();
+  if(!data) return;
+
+  syncedScores = data.scores || {};
+  syncedActiveCats = data.activeCategories || {};
+  syncedSpinner = data.currentSpinner || names[0];
+
+  renderScores();
+  renderChips();
+  spinnerNameEl.textContent = syncedSpinner;
+
+  const r = data.round;
+
+  if(!r){
+    resultEl.classList.remove('show');
+    lastAppliedRoundId = null;
+    if(!isInitialLoad) resetWheelVisual();
+    isInitialLoad = false;
+    return;
+  }
+
+  const isNewRound = r.id !== lastAppliedRoundId;
+
+  if(isInitialLoad){
+    // Joined mid-game (or refreshed) — show the current round instantly, no animation.
+    lastAppliedRoundId = r.id;
+    isInitialLoad = false;
+    applyRoundToUI(r);
+    return;
+  }
+
+  if(isNewRound){
+    spinning = true;
+    spinBtn.disabled = true;
+    const extraSpins = 6 + Math.floor(Math.random()*3);
+    rotateTo(r.pickIndex, extraSpins);
+    setTimeout(()=>{
+      spinning = false;
+      spinBtn.disabled = false;
+      lastAppliedRoundId = r.id;
+      applyRoundToUI(r);
+    }, 4300);
+  } else {
+    // Same round, just mode/question changed (Truth/Dare toggle, reroll) — update instantly.
+    applyRoundToUI(r);
+  }
+});
+
+function applyRoundToUI(r){
+  pickedNameEl.textContent = r.pickedName;
+  whoLabelEl.textContent = `${r.spinnerName} sẽ hỏi`;
+  btnTruth.classList.toggle('active', r.mode==='truth');
+  btnDare.classList.toggle('active', r.mode==='dare');
+  qTagEl.textContent = r.tag;
+  qTextEl.textContent = r.text;
+  resultEl.classList.add('show');
+}
+</script>
+</body>
+</html>
