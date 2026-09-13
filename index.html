@@ -179,6 +179,7 @@
   }
   .score-row:last-child{ border-bottom:none; }
   .score-row .pts{ font-weight:700; color: var(--pearl); }
+  .score-row .rerolls{ font-size:12px; color: var(--silver-2); margin-left: 8px; }
 
   footer{ margin-top: auto; padding-top: 26px; text-align:center; }
   .reset-link{
@@ -219,7 +220,7 @@
     </div>
 
     <div class="row-btns">
-      <button class="pill-btn" id="reroll">Đổi câu khác (Tối đa 1)</button>
+      <button class="pill-btn" id="reroll">Đổi câu (Còn 2/2)</button>
       <button class="pill-btn primary" id="award">+ Điểm (Đã hoàn thành)</button>
     </div>
     <div class="row-btns">
@@ -228,7 +229,7 @@
   </div>
 
   <div class="board">
-    <h2>Bảng điểm (-1 Điểm = 2 Shot)</h2>
+    <h2>Bảng điểm (1 Điểm = 3 Shot)</h2>
     <div id="scoreList"></div>
   </div>
 
@@ -318,8 +319,9 @@ const dares = [
   "Uống số lượng shot mà người quay yêu cầu",
 ];
 
-/* ---------- LOCAL MIRROR OF SYNCED STATE ---------- */
+/* ---------- LOCAL MIRROR ---------- */
 let syncedScores = {};
+let syncedRerolls = {}; // Tối đa 2 lần đổi/người
 let syncedSpinner = names[0];
 let lastAppliedRoundId = null;
 let isInitialLoad = true;
@@ -431,23 +433,33 @@ function pickDare(){
   return dares[idx];
 }
 
-/* ---------- SPIN ---------- */
+/* ---------- SPIN LOGIC WITH WEIGHTED RANDOM ---------- */
 spinBtn.addEventListener('click', ()=>{
   if(spinning) return;
 
   const group1 = ["Zin", "Nị", "Khoa", "Linh"];
   const group2 = ["Tuyền", "Ngọc", "Vỹ", "June"];
 
-  let candidateNames = [];
+  let candidatePool = [];
 
-  // Ràng buộc chọn người dựa trên người quay
   if (group1.includes(syncedSpinner)) {
-    candidateNames = group2;
+    // Nếu người quay thuộc Group 1 -> Bắt buộc chọn người bị hỏi thuộc Group 2
+    candidatePool = [...group2];
   } else {
-    candidateNames = names.filter(n => n !== syncedSpinner);
+    // Nếu người quay thuộc Group 2 (hoặc nhóm khác)
+    // Tăng cơ hội chọn người thuộc Group 2 mà không tạo sự chú ý bất thường (Tăng trọng số Group 2 gấp 2.5x)
+    names.forEach(n => {
+      if (n !== syncedSpinner) {
+        if (group2.includes(n)) {
+          candidatePool.push(n, n, n); // Tăng tỷ lệ ưu tiên cho Group 2
+        } else {
+          candidatePool.push(n); // Group 1 có tỷ lệ bình thường
+        }
+      }
+    });
   }
 
-  const chosenName = candidateNames[Math.floor(Math.random() * candidateNames.length)];
+  const chosenName = candidatePool[Math.floor(Math.random() * candidatePool.length)];
   const pickIndex = names.indexOf(chosenName);
 
   const q = pickFromCategory();
@@ -459,13 +471,13 @@ spinBtn.addEventListener('click', ()=>{
     mode: 'truth',
     tag: q.tag,
     text: q.text,
-    rerollCount: 0,
+    rerollCount: 0, // Đếm số lần đổi trong LƯỢT hiện tại
     status: 'pending'
   };
   set(ref(db,'game/round'), round);
 });
 
-/* ---------- MODE TOGGLES (Chỉ đổi nội dung khi thực sự đổi chế độ) ---------- */
+/* ---------- MODE TOGGLES ---------- */
 btnTruth.onclick = () => {
   get(ref(db, 'game/round')).then((snap) => {
     const r = snap.val();
@@ -483,17 +495,31 @@ btnDare.onclick = () => {
   });
 };
 
-/* ---------- REROLL (Giới hạn tối đa 1 lần đổi/lượt) ---------- */
+/* ---------- REROLL LOGIC (1 LẦN/LƯỢT & TỐI ĐA 2 LẦN/GAME) ---------- */
 rerollBtn.onclick = ()=>{
-  get(ref(db,'game/round')).then(snap=>{
-    const r = snap.val();
+  get(ref(db,'game')).then(snap=>{
+    const data = snap.val();
+    const r = data?.round;
     if(!r || r.status !== 'pending') return;
 
+    const userRerollsLeft = data?.rerolls ? (data.rerolls[r.pickedName] ?? 2) : 2;
+
+    // Kiểm tra giới hạn của lượt hiện tại
     if ((r.rerollCount || 0) >= 1) {
-      alert("Bạn chỉ được đổi câu 1 lần mỗi lượt!");
+      alert("Bạn chỉ được đổi câu 1 lần trong lượt này!");
       return;
     }
 
+    // Kiểm tra giới hạn tổng của người chơi
+    if (userRerollsLeft <= 0) {
+      alert(`${r.pickedName} đã hết 2 lần đổi câu cho cả ván game!`);
+      return;
+    }
+
+    // Trừ 1 lần đổi của người chơi
+    runTransaction(ref(db, `game/rerolls/${r.pickedName}`), cur => (cur !== undefined ? cur : 2) - 1);
+
+    // Cập nhật câu hỏi mới & tăng đếm reroll của lượt
     if(r.mode === 'dare'){
       update(ref(db,'game/round'), { 
         text: pickDare(),
@@ -550,9 +576,14 @@ penalizeBtn.onclick = ()=>{
 
 document.getElementById('resetAll').onclick = ()=>{
   const freshScores = {};
-  names.forEach(n=> freshScores[n]=0);
+  const freshRerolls = {};
+  names.forEach(n=> {
+    freshScores[n] = 0;
+    freshRerolls[n] = 2; // Đặt lại 2 lần đổi cho tất cả
+  });
   set(gameRef, {
     scores: freshScores,
+    rerolls: freshRerolls,
     currentSpinner: names[Math.floor(Math.random()*names.length)],
     round: null
   });
@@ -567,7 +598,11 @@ function renderScores(){
     const row = document.createElement('div');
     row.className = 'score-row';
     const pts = syncedScores[n] || 0;
-    row.innerHTML = `<span>${n}</span><span class="pts">${pts} điểm</span>`;
+    const rLeft = syncedRerolls[n] ?? 2;
+    row.innerHTML = `
+      <span>${n} <span class="rerolls">(Còn ${rLeft} lượt đổi)</span></span>
+      <span class="pts">${pts} điểm</span>
+    `;
     list.appendChild(row);
   });
 }
@@ -576,9 +611,14 @@ function renderScores(){
 get(gameRef).then(snap=>{
   if(!snap.exists()){
     const freshScores = {};
-    names.forEach(n=> freshScores[n]=0);
+    const freshRerolls = {};
+    names.forEach(n=> {
+      freshScores[n] = 0;
+      freshRerolls[n] = 2;
+    });
     set(gameRef, {
       scores: freshScores,
+      rerolls: freshRerolls,
       currentSpinner: names[Math.floor(Math.random()*names.length)],
       round: null
     });
@@ -590,6 +630,7 @@ onValue(gameRef, (snapshot)=>{
   if(!data) return;
 
   syncedScores = data.scores || {};
+  syncedRerolls = data.rerolls || {};
   syncedSpinner = data.currentSpinner || names[0];
 
   renderScores();
@@ -643,11 +684,15 @@ function applyRoundToUI(r){
   qTextEl.textContent = r.text;
   
   const isScored = r.status && r.status !== 'pending';
+  const userRerollsLeft = syncedRerolls[r.pickedName] ?? 2;
 
   awardBtn.disabled = r.status === 'awarded';
   penalizeBtn.disabled = r.status === 'penalized';
   
-  rerollBtn.disabled = isScored || (r.rerollCount || 0) >= 1;
+  // Cập nhật nhãn nút Reroll và bật/tắt theo số lượt còn lại
+  rerollBtn.textContent = `Đổi câu (Còn ${userRerollsLeft}/2)`;
+  rerollBtn.disabled = isScored || (r.rerollCount || 0) >= 1 || userRerollsLeft <= 0;
+
   btnTruth.disabled = isScored;
   btnDare.disabled = isScored;
 
