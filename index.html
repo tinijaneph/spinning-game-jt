@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -261,52 +262,64 @@ const gameRef = ref(db, 'game');
 /* ---------- DATA ---------- */
 const names = ["Nị","Zin","Vỹ","Ngọc","Linh","Khoa","Tuyền","June"];
 
-const CATS = [
+// BỘ CÂU HỎI RIÊNG DÀNH CHO: Vỹ, Tuyền, Ngọc, June
+const CATS_RESTRICTED = [
   { id: 'love', label: "Tình yêu", questions: [
-    "Tình trạng mối quan hệ hiện tại của bạn là gì? Đang ở giai đoạn nào (mới quen, tìm hiểu, yêu chính thức, phức tạp)? Mô tả chi tiết.",
+    "Tình trạng mối quan hệ hiện tại của bạn là gì? Đang ở giai đoạn nào (mới quen, tìm hiểu, yêu chính thức, phức tạp)? Nếu đang có người yêu, khi nào kết hôn? Mô tả chi tiết.",
     "Bạn đã có bao nhiêu mối tình? Mối tình đầu tiên bắt đầu khi bạn bao nhiêu tuổi, và tại sao chia tay?",
     "Trong tất cả người yêu cũ, ai là người bạn khó quên nhất? Điều gì khiến người đó đặc biệt?",
     "Mối tình nào kết thúc tệ nhất? Chuyện gì đã xảy ra và ai là người chủ động chia tay?",
-    "Bạn có đang thích ai trong thời điểm này không? Nếu có, người đó là ai (mô tả không cần nêu tên) và bạn thích điều gì ở họ?",
-    "Tiêu chuẩn chọn người yêu của bạn là gì? Điều gì là giới hạn đỏ (dealbreaker) bạn không thể chấp nhận?",
     "Bạn đã từng crush một người trong nhóm bạn bè chung chưa? Chuyện đó diễn ra thế nào?",
     "Lần đầu tiên bạn nói 'anh/em yêu em/anh' là khi nào, với ai, và bạn có hối hận vì nói câu đó không?",
     "Bạn từng bị từ chối tình cảm chưa? Kể lại chi tiết lần đó và cảm giác của bạn.",
     "Bạn có từng yêu xa chưa? Mối quan hệ đó kéo dài bao lâu và vì sao kết thúc (hoặc vẫn đang tiếp diễn)?",
-    "Người yêu cũ nào bạn vẫn còn giữ liên lạc? Vì sao vẫn nói chuyện với người đó?",
     "Bạn đã từng là người thứ ba hoặc từng bị cắm sừng chưa? Kể chi tiết nếu có.",
     "Trong các mối tình đã qua, mối tình nào bạn hối hận nhất khi để mất? Vì sao?",
-    "Bạn nghĩ mình có đang 'chưa qua được' người yêu cũ nào không? Ai và tại sao?",
-    "Tin nhắn tỏ tình ngọt ngào nhất bạn từng nhận hoặc từng gửi là gì?",
+    "Tin nhắn tỏ tình ngọt ngào nhất bạn từng nhận hoặc từng gửi là gì?"
   ]},
   { id: 'secret', label: "Bí mật", questions: [
     "Điều xấu hổ nhất bạn từng làm trước mặt người mình thích là gì?",
     "Kỷ niệm lén lút hoặc 'vượt rào' đáng nhớ nhất của bạn khi yêu một người là gì?",
-    "Lời hứa tình cảm nào bạn từng thất hứa, và điều đó dằn xé bạn đến mức nào?",
     "Bạn từng theo dõi (stalk) mạng xã hội của người yêu cũ đến mức nào? Kể lại lần gần nhất.",
-    "Vết thương tình cảm nào từng khiến bạn phải giả vờ mạnh mẽ trước mặt mọi người suốt một thời gian dài?",
     "Bạn từng làm gì khiến bản thân xấu hổ nhất khi say rượu?",
-    "Bạn từng có tình cảm đơn phương sâu đậm với một người mà họ vĩnh viễn không bao giờ biết chưa? Chuyện đó như thế nào?",
-    "Suy nghĩ hoặc góc khuất tiêu cực nhất bạn từng giấu kín trong một mối tình là gì?",
-    "Bạn từng đọc trộm tin nhắn của người yêu/người yêu cũ chưa? Bạn tìm thấy gì?",
-    "Nỗi sợ hoặc sự tự ti lớn nhất của bạn khi bước vào một mối quan hệ tình cảm là gì?",
+    "Bạn từng đọc trộm tin nhắn của người yêu/người yêu cũ chưa? Bạn tìm thấy gì?"
   ]},
   { id: 'hypo', label: "Giả sử", questions: [
-    "Nếu được gặp lại người yêu cũ duy nhất một lần để nói một điều thật lòng, bạn sẽ chọn gặp ai và nói gì?",
-    "Nếu ngày mai người yêu cũ nhắn tin muốn quay lại, bạn sẽ trả lời thế nào?",
     "Nếu chỉ được giữ liên lạc với một người yêu cũ duy nhất suốt đời, bạn chọn ai?",
     "Nếu phải công khai một bí mật của bản thân trước cả nhóm, bạn sẽ chọn nói bí mật nào?",
     "Nếu có thể quay lại và ngăn một mối tình xảy ra, bạn sẽ chọn ngăn mối tình nào?",
-    "Nếu người yêu hiện tại (hoặc tương lai) hỏi về mối tình sâu đậm nhất của bạn, bạn sẽ kể đến mức nào?",
-    "Nếu phải nhắn một tin nhắn thật lòng cho người yêu cũ ngay bây giờ, bạn sẽ viết gì?",
+    "Nếu người yêu hiện tại (hoặc tương lai) hỏi về mối tình sâu đậm nhất của bạn, bạn sẽ kể đến mức nào?"
+  ]}
+];
+
+// BỘ CÂU HỎI ĐẦY ĐỦ DÀNH CHO NHÓM CÒN LẠI (Zin, Nị, Khoa, Linh)
+const CATS_FULL = [
+  ...CATS_RESTRICTED,
+  { id: 'love_extra', label: "Tình yêu", questions: [
+    "Bạn có đang thích ai trong thời điểm này không? Nếu có, người đó là ai (mô tả không cần nêu tên) và bạn thích điều gì ở họ?",
+    "Tiêu chuẩn chọn người yêu của bạn là gì? Điều gì là giới hạn đỏ (dealbreaker) bạn không thể chấp nhận?",
+    "Người yêu cũ nào bạn vẫn còn giữ liên lạc? Vì sao vẫn nói chuyện với người đó?",
+    "Bạn nghĩ mình có đang 'chưa qua được' người yêu cũ nào không? Ai và tại sao?"
+  ]},
+  { id: 'secret_extra', label: "Bí mật", questions: [
+    "Lời hứa tình cảm nào bạn từng thất hứa, và điều đó dằn xé bạn đến mức nào?",
+    "Vết thương tình cảm nào từng khiến bạn phải giả vờ mạnh mẽ trước mặt mọi người suốt một thời gian dài?",
+    "Bạn từng có tình cảm đơn phương sâu đậm với một người mà họ vĩnh viễn không bao giờ biết chưa? Chuyện đó như thế nào?",
+    "Suy nghĩ hoặc góc khuất tiêu cực nhất bạn từng giấu kín trong một mối tình là gì?",
+    "Nỗi sợ hoặc sự tự ti lớn nhất của bạn khi bước vào một mối quan hệ tình cảm là gì?"
+  ]},
+  { id: 'hypo_extra', label: "Giả sử", questions: [
+    "Nếu được gặp lại người yêu cũ duy nhất một lần để nói một điều thật lòng, bạn sẽ chọn gặp ai và nói gì?",
+    "Nếu ngày mai người yêu cũ nhắn tin muốn quay lại, bạn sẽ trả lời thế nào?",
+    "Nếu phải nhắn một tin nhắn thật lòng cho người yêu cũ ngay bây giờ, bạn sẽ viết gì?"
   ]},
   { id: 'fun', label: "Vui / Hài", questions: [
     "Kiểu người bạn 'dễ đổ' nhất là kiểu ngoại hình/tính cách nào?",
     "Bạn từng bị 'thả thính' một cách lộ liễu nhưng giả vờ không biết chưa? Kể lại.",
     "Hành động ga-lăng hoặc lãng mạn nhưng 'lỗi thời/sến cẩm' nhất bạn từng làm cho ai đó là gì?",
     "Bạn nghĩ ai trong nhóm này sẽ kết hôn sớm nhất? Vì sao?",
-    "Nếu phải tự viết một 'cảnh báo' cho người yêu tương lai về điểm khó tính nhất của bạn khi yêu, bạn sẽ viết gì?",
-  ]},
+    "Nếu phải tự viết một 'cảnh báo' cho người yêu tương lai về điểm khó tính nhất của bạn khi yêu, bạn sẽ viết gì?"
+  ]}
 ];
 
 const dares = [
@@ -316,18 +329,17 @@ const dares = [
   "Bắt chước cách bạn tỏ tình (hoặc từng bị tỏ tình) trước mặt cả nhóm.",
   "Uống 5 shot",
   "Để cả nhóm chọn hộ bạn một câu để nhắn cho một người bất kỳ trong máy.",
-  "Uống số lượng shot mà người quay yêu cầu",
+  "Uống số lượng shot mà người quay yêu cầu"
 ];
 
 /* ---------- LOCAL MIRROR ---------- */
 let syncedScores = {};
-let syncedRerolls = {}; // Tối đa 2 lần đổi/người
+let syncedRerolls = {};
 let syncedSpinner = names[0];
 let lastAppliedRoundId = null;
 let isInitialLoad = true;
 let usedDares = new Set();
 let usedQuestions = {}; 
-CATS.forEach(c => usedQuestions[c.id] = new Set());
 
 /* ---------- WHEEL DRAW ---------- */
 const canvas = document.getElementById('wheel');
@@ -415,16 +427,25 @@ const awardBtn = document.getElementById('award');
 const penalizeBtn = document.getElementById('penalize');
 const rerollBtn = document.getElementById('reroll');
 
-/* ---------- QUESTION PICKING ---------- */
-function pickFromCategory(){
-  const cat = CATS[Math.floor(Math.random()*CATS.length)];
+/* ---------- QUESTION PICKING (ĐƯỢC PHÂN THEO NGƯỜI BỊ HỎI) ---------- */
+function pickFromCategory(targetName){
+  const restrictedGroup = ["Vỹ", "Tuyền", "Ngọc", "June"];
+  
+  // Tự động chọn kho câu hỏi phù hợp với targetName
+  const activeCats = restrictedGroup.includes(targetName) ? CATS_RESTRICTED : CATS_FULL;
+  
+  const cat = activeCats[Math.floor(Math.random()*activeCats.length)];
+  
+  if(!usedQuestions[cat.id]) usedQuestions[cat.id] = new Set();
   let used = usedQuestions[cat.id];
+  
   if(used.size >= cat.questions.length) used.clear();
   let idx;
   do { idx = Math.floor(Math.random()*cat.questions.length); } while(used.has(idx) && used.size < cat.questions.length);
   used.add(idx);
   return { tag: cat.label, text: cat.questions[idx] };
 }
+
 function pickDare(){
   if(usedDares.size >= dares.length) usedDares.clear();
   let idx;
@@ -433,7 +454,7 @@ function pickDare(){
   return dares[idx];
 }
 
-/* ---------- SPIN LOGIC WITH WEIGHTED RANDOM ---------- */
+/* ---------- SPIN LOGIC ---------- */
 spinBtn.addEventListener('click', ()=>{
   if(spinning) return;
 
@@ -443,17 +464,14 @@ spinBtn.addEventListener('click', ()=>{
   let candidatePool = [];
 
   if (group1.includes(syncedSpinner)) {
-    // Nếu người quay thuộc Group 1 -> Bắt buộc chọn người bị hỏi thuộc Group 2
     candidatePool = [...group2];
   } else {
-    // Nếu người quay thuộc Group 2 (hoặc nhóm khác)
-    // Tăng cơ hội chọn người thuộc Group 2 mà không tạo sự chú ý bất thường (Tăng trọng số Group 2 gấp 2.5x)
     names.forEach(n => {
       if (n !== syncedSpinner) {
         if (group2.includes(n)) {
-          candidatePool.push(n, n, n); // Tăng tỷ lệ ưu tiên cho Group 2
+          candidatePool.push(n, n, n); // Tăng trọng số cho Group 2
         } else {
-          candidatePool.push(n); // Group 1 có tỷ lệ bình thường
+          candidatePool.push(n);
         }
       }
     });
@@ -462,7 +480,9 @@ spinBtn.addEventListener('click', ()=>{
   const chosenName = candidatePool[Math.floor(Math.random() * candidatePool.length)];
   const pickIndex = names.indexOf(chosenName);
 
-  const q = pickFromCategory();
+  // Rút câu hỏi theo bộ dành riêng cho người được chọn
+  const q = pickFromCategory(chosenName);
+  
   const round = {
     id: Date.now(),
     pickIndex,
@@ -471,7 +491,7 @@ spinBtn.addEventListener('click', ()=>{
     mode: 'truth',
     tag: q.tag,
     text: q.text,
-    rerollCount: 0, // Đếm số lần đổi trong LƯỢT hiện tại
+    rerollCount: 0,
     status: 'pending'
   };
   set(ref(db,'game/round'), round);
@@ -482,7 +502,7 @@ btnTruth.onclick = () => {
   get(ref(db, 'game/round')).then((snap) => {
     const r = snap.val();
     if (!r || r.status !== 'pending' || r.mode === 'truth') return;
-    const q = pickFromCategory();
+    const q = pickFromCategory(r.pickedName);
     update(ref(db, 'game/round'), { mode: 'truth', tag: q.tag, text: q.text });
   });
 };
@@ -495,7 +515,7 @@ btnDare.onclick = () => {
   });
 };
 
-/* ---------- REROLL LOGIC (1 LẦN/LƯỢT & TỐI ĐA 2 LẦN/GAME) ---------- */
+/* ---------- REROLL LOGIC ---------- */
 rerollBtn.onclick = ()=>{
   get(ref(db,'game')).then(snap=>{
     const data = snap.val();
@@ -504,29 +524,25 @@ rerollBtn.onclick = ()=>{
 
     const userRerollsLeft = data?.rerolls ? (data.rerolls[r.pickedName] ?? 2) : 2;
 
-    // Kiểm tra giới hạn của lượt hiện tại
     if ((r.rerollCount || 0) >= 1) {
       alert("Bạn chỉ được đổi câu 1 lần trong lượt này!");
       return;
     }
 
-    // Kiểm tra giới hạn tổng của người chơi
     if (userRerollsLeft <= 0) {
       alert(`${r.pickedName} đã hết 2 lần đổi câu cho cả ván game!`);
       return;
     }
 
-    // Trừ 1 lần đổi của người chơi
     runTransaction(ref(db, `game/rerolls/${r.pickedName}`), cur => (cur !== undefined ? cur : 2) - 1);
 
-    // Cập nhật câu hỏi mới & tăng đếm reroll của lượt
     if(r.mode === 'dare'){
       update(ref(db,'game/round'), { 
         text: pickDare(),
         rerollCount: (r.rerollCount || 0) + 1 
       });
     } else {
-      const q = pickFromCategory();
+      const q = pickFromCategory(r.pickedName);
       update(ref(db,'game/round'), { 
         tag: q.tag, 
         text: q.text,
@@ -579,7 +595,7 @@ document.getElementById('resetAll').onclick = ()=>{
   const freshRerolls = {};
   names.forEach(n=> {
     freshScores[n] = 0;
-    freshRerolls[n] = 2; // Đặt lại 2 lần đổi cho tất cả
+    freshRerolls[n] = 2;
   });
   set(gameRef, {
     scores: freshScores,
@@ -689,7 +705,6 @@ function applyRoundToUI(r){
   awardBtn.disabled = r.status === 'awarded';
   penalizeBtn.disabled = r.status === 'penalized';
   
-  // Cập nhật nhãn nút Reroll và bật/tắt theo số lượt còn lại
   rerollBtn.textContent = `Đổi câu (Còn ${userRerollsLeft}/2)`;
   rerollBtn.disabled = isScored || (r.rerollCount || 0) >= 1 || userRerollsLeft <= 0;
 
