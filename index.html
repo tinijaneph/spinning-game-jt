@@ -307,7 +307,6 @@ const CATS = [
   ]},
 ];
 
-
 const dares = [
   "Nhắn tin cho người yêu cũ gần nhất một câu 'Dạo này anh/em sao rồi?' và đọc to phản hồi cho cả nhóm nghe.",
   "Gọi điện video (facetime/video messenger) cho người yêu cũ bất kỳ.",
@@ -450,13 +449,23 @@ spinBtn.addEventListener('click', ()=>{
   set(ref(db,'game/round'), round);
 });
 
-btnTruth.onclick = ()=>{
-  const q = pickFromCategory();
-  update(ref(db,'game/round'), { mode:'truth', tag:q.tag, text:q.text });
+btnTruth.onclick = () => {
+  get(ref(db, 'game/round')).then((snap) => {
+    const r = snap.val();
+    if (!r || r.status !== 'pending' || r.mode === 'truth') return;
+    const q = pickFromCategory();
+    update(ref(db, 'game/round'), { mode: 'truth', tag: q.tag, text: q.text });
+  });
 };
-btnDare.onclick = ()=>{
-  update(ref(db,'game/round'), { mode:'dare', tag:'Thử thách', text:pickDare() });
+
+btnDare.onclick = () => {
+  get(ref(db, 'game/round')).then((snap) => {
+    const r = snap.val();
+    if (!r || r.status !== 'pending' || r.mode === 'dare') return;
+    update(ref(db, 'game/round'), { mode: 'dare', tag: 'Thử thách', text: pickDare() });
+  });
 };
+
 document.getElementById('reroll').onclick = ()=>{
   get(ref(db,'game/round')).then(snap=>{
     const r = snap.val();
