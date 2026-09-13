@@ -429,7 +429,6 @@ const rerollBtn = document.getElementById('reroll');
 function pickFromCategory(targetName){
   const restrictedGroup = ["Vỹ", "Tuyền", "Ngọc", "June"];
   
-  // Tự động chọn kho câu hỏi phù hợp với targetName
   const activeCats = restrictedGroup.includes(targetName) ? CATS_RESTRICTED : CATS_FULL;
   
   const cat = activeCats[Math.floor(Math.random()*activeCats.length)];
@@ -452,21 +451,13 @@ function pickDare(){
   return dares[idx];
 }
 
-/* ---------- SPIN LOGIC ---------- */
+/* ---------- SPIN LOGIC (HOÀN TOÀN NGẪU NHIÊN 1/8) ---------- */
 spinBtn.addEventListener('click', ()=>{
   if(spinning) return;
 
-  const specialSpinners = ["Ngọc", "Tuyền", "June", "Vỹ"];
-  let candidatePool = [];
-
-  if (specialSpinners.includes(syncedSpinner)) {
-    candidatePool = ["June", "Vỹ", "Tuyền", "Linh", "Zin"];
-  } else {
-    candidatePool = ["Tuyền", "Ngọc", "Vỹ", "June"];
-  }
-
-  const chosenName = candidatePool[Math.floor(Math.random() * candidatePool.length)];
-  const pickIndex = names.indexOf(chosenName);
+  // Chọn hoàn toàn ngẫu nhiên 1 người trong mảng names (tỷ lệ như nhau)
+  const pickIndex = Math.floor(Math.random() * names.length);
+  const chosenName = names[pickIndex];
 
   // Chuẩn bị sẵn cả Sự Thật lẫn Thử Thách khi bắt đầu lượt
   const q = pickFromCategory(chosenName);
@@ -475,7 +466,7 @@ spinBtn.addEventListener('click', ()=>{
   const round = {
     id: Date.now(),
     pickIndex,
-    pickedName: names[pickIndex],
+    pickedName: chosenName,
     spinnerName: syncedSpinner,
     mode: 'truth',
     truthTag: q.tag,
@@ -493,7 +484,6 @@ btnTruth.onclick = () => {
   get(ref(db, 'game/round')).then((snap) => {
     const r = snap.val();
     if (!r || r.status !== 'pending' || r.mode === 'truth') return;
-    // Chỉ chuyển trạng thái chế độ sang truth mà KHÔNG sinh lại nội dung
     update(ref(db, 'game/round'), { mode: 'truth' });
   });
 };
@@ -502,7 +492,6 @@ btnDare.onclick = () => {
   get(ref(db, 'game/round')).then((snap) => {
     const r = snap.val();
     if (!r || r.status !== 'pending' || r.mode === 'dare') return;
-    // Chỉ chuyển trạng thái chế độ sang dare mà KHÔNG sinh lại nội dung
     update(ref(db, 'game/round'), { mode: 'dare' });
   });
 };
@@ -689,7 +678,6 @@ function applyRoundToUI(r){
   btnTruth.classList.toggle('active', r.mode==='truth');
   btnDare.classList.toggle('active', r.mode==='dare');
   
-  // Hiển thị dữ liệu tương ứng với mode hiện tại mà không bị làm mới
   if(r.mode === 'dare') {
     qTagEl.textContent = r.dareTag || 'Thử thách';
     qTextEl.textContent = r.dareText || r.text;
