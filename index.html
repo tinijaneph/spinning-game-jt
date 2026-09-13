@@ -137,6 +137,7 @@
   .mode-btn{
     flex:1; padding: 10px; border-radius: 12px; border:1px solid var(--line);
     background: var(--charcoal); color: var(--pearl-dim); font-size: 14px; font-weight:600;
+    cursor: pointer;
   }
   .mode-btn.active{ background: var(--pearl); color:#111; border-color:transparent; }
   .question-box{
@@ -218,16 +219,16 @@
     </div>
 
     <div class="row-btns">
-      <button class="pill-btn" id="reroll">Đổi câu khác</button>
-      <button class="pill-btn primary" id="award">+ Điểm (đã trả lời)</button>
+      <button class="pill-btn" id="reroll">Đổi câu khác (Tối đa 1)</button>
+      <button class="pill-btn primary" id="award">+ Điểm (Đã hoàn thành)</button>
     </div>
     <div class="row-btns">
-      <button class="pill-btn deduct" id="penalize">− Điểm (từ chối trả lời)</button>
+      <button class="pill-btn deduct" id="penalize">− Điểm / Phạt Shot (Từ chối)</button>
     </div>
   </div>
 
   <div class="board">
-    <h2>Bảng điểm</h2>
+    <h2>Bảng điểm (1 Điểm = 3 Shot)</h2>
     <div id="scoreList"></div>
   </div>
 
@@ -323,7 +324,7 @@ let syncedSpinner = names[0];
 let lastAppliedRoundId = null;
 let isInitialLoad = true;
 let usedDares = new Set();
-let usedQuestions = {}; // per-category, local-only
+let usedQuestions = {}; 
 CATS.forEach(c => usedQuestions[c.id] = new Set());
 
 /* ---------- WHEEL DRAW ---------- */
@@ -410,6 +411,7 @@ const btnDare = document.getElementById('btnDare');
 const spinnerNameEl = document.getElementById('spinnerName');
 const awardBtn = document.getElementById('award');
 const penalizeBtn = document.getElementById('penalize');
+const rerollBtn = document.getElementById('reroll');
 
 /* ---------- QUESTION PICKING ---------- */
 function pickFromCategory(){
@@ -432,9 +434,22 @@ function pickDare(){
 /* ---------- SPIN ---------- */
 spinBtn.addEventListener('click', ()=>{
   if(spinning) return;
-  const n = names.length;
-  let pickIndex;
-  do { pickIndex = Math.floor(Math.random()*n); } while (names[pickIndex] === syncedSpinner && n > 1);
+
+  const group1 = ["Zin", "Nị", "Khoa", "Linh"];
+  const group2 = ["Tuyền", "Ngọc", "Vỹ", "June"];
+
+  let candidateNames = [];
+
+  // Ràng buộc chọn người dựa trên người quay
+  if (group1.includes(syncedSpinner)) {
+    candidateNames = group2;
+  } else {
+    candidateNames = names.filter(n => n !== syncedSpinner);
+  }
+
+  const chosenName = candidateNames[Math.floor(Math.random() * candidateNames.length)];
+  const pickIndex = names.indexOf(chosenName);
+
   const q = pickFromCategory();
   const round = {
     id: Date.now(),
@@ -444,11 +459,13 @@ spinBtn.addEventListener('click', ()=>{
     mode: 'truth',
     tag: q.tag,
     text: q.text,
-    status: 'pending' // 'pending', 'awarded', or 'penalized'
+    rerollCount: 0,
+    status: 'pending'
   };
   set(ref(db,'game/round'), round);
 });
 
+/* ---------- MODE TOGGLES (Chỉ đổi nội dung khi thực sự đổi chế độ) ---------- */
 btnTruth.onclick = () => {
   get(ref(db, 'game/round')).then((snap) => {
     const r = snap.val();
@@ -466,15 +483,29 @@ btnDare.onclick = () => {
   });
 };
 
-document.getElementById('reroll').onclick = ()=>{
+/* ---------- REROLL (Giới hạn tối đa 1 lần đổi/lượt) ---------- */
+rerollBtn.onclick = ()=>{
   get(ref(db,'game/round')).then(snap=>{
     const r = snap.val();
     if(!r || r.status !== 'pending') return;
+
+    if ((r.rerollCount || 0) >= 1) {
+      alert("Bạn chỉ được đổi câu 1 lần mỗi lượt!");
+      return;
+    }
+
     if(r.mode === 'dare'){
-      update(ref(db,'game/round'), { text: pickDare() });
+      update(ref(db,'game/round'), { 
+        text: pickDare(),
+        rerollCount: (r.rerollCount || 0) + 1 
+      });
     } else {
       const q = pickFromCategory();
-      update(ref(db,'game/round'), { tag:q.tag, text:q.text });
+      update(ref(db,'game/round'), { 
+        tag: q.tag, 
+        text: q.text,
+        rerollCount: (r.rerollCount || 0) + 1 
+      });
     }
   });
 };
@@ -486,12 +517,11 @@ awardBtn.onclick = ()=>{
     const pts = r.mode === 'dare' ? 2 : 1;
     
     if (r.status === 'penalized') {
-      // Correcting: revert previous penalty (-1 -> +pts)
       runTransaction(ref(db, `game/scores/${r.pickedName}`), cur => (cur||0) + 1 + pts);
     } else if (r.status === 'pending') {
       runTransaction(ref(db, `game/scores/${r.pickedName}`), cur => (cur||0) + pts);
     } else {
-      return; // Already awarded
+      return;
     }
     
     update(ref(db,'game/round'), { status: 'awarded' });
@@ -506,12 +536,11 @@ penalizeBtn.onclick = ()=>{
     const pts = r.mode === 'dare' ? 2 : 1;
     
     if (r.status === 'awarded') {
-      // Correcting: revert previous award (+pts -> -1)
       runTransaction(ref(db, `game/scores/${r.pickedName}`), cur => (cur||0) - pts - 1);
     } else if (r.status === 'pending') {
       runTransaction(ref(db, `game/scores/${r.pickedName}`), cur => (cur||0) - 1);
     } else {
-      return; // Already penalized
+      return;
     }
     
     update(ref(db,'game/round'), { status: 'penalized' });
@@ -537,7 +566,8 @@ function renderScores(){
   sorted.forEach(n=>{
     const row = document.createElement('div');
     row.className = 'score-row';
-    row.innerHTML = `<span>${n}</span><span class="pts">${syncedScores[n]||0}</span>`;
+    const pts = syncedScores[n] || 0;
+    row.innerHTML = `<span>${n}</span><span class="pts">${pts} điểm</span>`;
     list.appendChild(row);
   });
 }
@@ -576,7 +606,6 @@ onValue(gameRef, (snapshot)=>{
     return;
   }
 
-  // Spin button is disabled while wheel is spinning or during an un-scored question
   const isScored = r.status && r.status !== 'pending';
   spinBtn.disabled = spinning || !isScored;
 
@@ -615,11 +644,10 @@ function applyRoundToUI(r){
   
   const isScored = r.status && r.status !== 'pending';
 
-  // Toggle button states based on current scoring status
   awardBtn.disabled = r.status === 'awarded';
   penalizeBtn.disabled = r.status === 'penalized';
   
-  document.getElementById('reroll').disabled = isScored;
+  rerollBtn.disabled = isScored || (r.rerollCount || 0) >= 1;
   btnTruth.disabled = isScored;
   btnDare.disabled = isScored;
 
